@@ -1,0 +1,65 @@
+name: github-action
+run-name: ${{ github.actor }} is out building GitHub Actions
+
+on:
+  push:
+    # Pattern matched against refs/tags
+    tags:        
+      - '**' 
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build Maven Projects
+        run: |
+          mvn clean package -f ./core(order)/pom.xml
+          mvn clean package -f ./suppoting(delivery)/pom.xml
+          mvn clean package -f ./dashboard service/pom.xml
+
+      - name: Docker Build and push for CoreOrder
+        uses: docker/build-push-action@v4
+        with:
+          context: ./core(order)
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/core(order):latest
+            ghcr.io/${{ github.repository }}/core(order):${{ github.ref_name }}
+            
+      - name: Docker Build and push for SuppotingDelivery
+        uses: docker/build-push-action@v4
+        with:
+          context: ./suppoting(delivery)
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/suppoting(delivery):latest
+            ghcr.io/${{ github.repository }}/suppoting(delivery):${{ github.ref_name }}
+            
+      - name: Docker Build and push for DashboardService
+        uses: docker/build-push-action@v4
+        with:
+          context: ./dashboard service
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/dashboard-service:latest
+            ghcr.io/${{ github.repository }}/dashboard-service:${{ github.ref_name }}
+            
